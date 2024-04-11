@@ -13,4 +13,3 @@ nbody-mpi: nbody-mpi.c
 .PHONY: clean
 clean:
 	rm -rf nbody nbody-mpi
-

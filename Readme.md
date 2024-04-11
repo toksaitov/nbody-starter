@@ -1,32 +1,26 @@
 nbody-starter
 =============
 
-*nbody-starter* is a starter code of a naive N-body simulator to parallelize.
-The C serial program generates a test dataset of planetary bodies, computes the
-forward N-body simulation, and writes the result to standard output. The
-resulting data can be replayed by the accompanying Unity
-[project](https://github.com/toksaitov/nbody-project).
+*nbody-starter* is the starter code for a naive N-body simulator intended for parallelization. The C serial program generates a test dataset of planetary bodies, computes the forward N-body simulation, and writes the result to standard output. The resulting data can be replayed using the accompanying Unity [project](https://github.com/toksaitov/nbody-project).
 
-The starter code in `nbody.c` can be used to write a parallelized version in the
-`nbody-mpi.c` file.
+The starter code in `nbody.c` is designed for you to create a parallelized version in the `nbody-mpi.c` file.
 
 ## Prerequisites
 
-* *MPICH* `>=3.2.1`
+* *Open MPI* `>=4.1.2`
 
 ## Usage
 
-First, install *MPICH*, then compile the programs.
+Ensure that Open MPI is installed and your parallelized solution is prepared. Then, compile the programs:
 
 ```bash
 make
 ```
 
-Next, run the program. Do not forget to specify all the appropriate command-line
-arguments.
+Next, execute the parallelized program. Remember to specify all required command-line arguments:
 
 ```
-time mpiexec -n <number of processes>             \
+time mpirun -np <number of processes>             \
     ./nbody-mpi <time period (~10-100)>           \
                 <delta time (~0.01-0.1)>          \
                 <body count (~100-1000)>          \
@@ -35,7 +29,7 @@ time mpiexec -n <number of processes>             \
                 [debug acceleration scale (~100)] > <file to write the output>
 ```
 
-You can also run the serial program in the following way
+You can run the serial program as follows:
 
 ```
 time ./nbody <time period (~10-100)>           \
@@ -46,16 +40,10 @@ time ./nbody <time period (~10-100)>           \
              [debug acceleration scale (~100)] > <file to write the output>
 ```
 
-In the beginning, both programs are serial and will work in exactly the same
-way.  You may use the code as a starting point to write a distributed
-implementation with MPICH.
-
 ## Licensing
 
-*nbody-starter* is licensed under the MIT license. See LICENSE for the full
-license text.
+*nbody-starter* is licensed under the MIT license. See LICENSE for the full license text.
 
 ## Credits
 
 *nbody-starter* was created by [Dmitrii Toksaitov](https://github.com/toksaitov).
-

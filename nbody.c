@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <math.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -32,23 +31,13 @@ static float *accelerations = NULL;
 
 #ifdef DEBUG
 
-#include <unistd.h>
-#include <stdbool.h>
-
 static const char progress_bar[] =
     "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||";
 static const int progress_bar_width =
     sizeof(progress_bar) / sizeof(progress_bar[0]);
 
-static bool is_stdout_redirected()
-{
-    return !isatty(fileno(stdout));
-}
-
 static void print_progress_bar(float percentage)
 {
-    if (!is_stdout_redirected()) { return; }
-
     int value = (int) (percentage * 100.0f);
     int left_pad = (int) (percentage * progress_bar_width);
     int right_pad = progress_bar_width - left_pad;
@@ -234,4 +223,3 @@ int main(int argc, char **argv)
 
     return EXIT_SUCCESS;
 }
-

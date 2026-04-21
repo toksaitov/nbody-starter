@@ -1,49 +1,135 @@
-nbody-starter
-=============
+Accelerating an N-body Simulation
+=================================
 
-*nbody-starter* is the starter code for a naive N-body simulator intended for parallelization. The C serial program generates a test dataset of planetary bodies, computes the forward N-body simulation, and writes the result to standard output. The resulting data can be replayed using the accompanying Unity [project](https://github.com/toksaitov/nbody-project).
+![N-body Simulation](https://raw.githubusercontent.com/rachmiroff/images/refs/heads/main/auca/com-392/spring-2026/nbody-project/nbody.png)
 
-The starter code in `nbody.c` is designed for you to create a parallelized version in the `nbody-mpi.c` file.
+The primary goal of this project is to optimize a C program that performs direct [N-body simulation](http://www.scholarpedia.org/article/N-body_simulations_(gravitational)) on a sample dataset of a small planetary system. The optimization should be achieved by distributing computation not only across the cores of a single machine but also across multiple computers in a cluster connected via a high-speed local network. To facilitate writing distributed code, you must utilize a library that implements the [MPI standard](https://www.mcs.anl.gov/research/projects/mpi), specifically, the Open MPI [library](https://www.open-mpi.org).
 
-## Prerequisites
+The project comprises two programs. The first is a serial C program that you are tasked with converting into a distributed application using Open MPI. Its code is available in this repository in the `nbody.c` file. This program generates a test dataset with several planets, each defined by random masses, positions in space, and initial velocities. It then performs a slow but accurate brute-force $O(N^2)$ direct N-Body simulation over a user-specified period. The outcomes, in terms of calculated accelerations at different time points, are displayed on the screen. This output can be redirected to a file for replay in the [second program](https://github.com/toksaitov/nbody-parallel-project). The second program is a Unity-based application designed to visualize the planetary system and its evolution over time. Your involvement with the second application is not required; it serves merely to add gravity (pun intended) and context to the project.
 
-* *Open MPI* `>=4.1.2`
+You can view the entire process of utilizing all the programs in the video below. The video also showcases the distributed version developed by your instructor, who opts for the MPICH library over Open MPI. Consequently, the instructor uses `mpiexec` instead of `mpirun`, with a few different flags (`-n` instead of `-np`, and `-f` instead of `-hostfile`). Additionally, the instructor simulates 100 bodies instead of 128. Despite these differences, the workflow remains largely the same.
 
-## Usage
+[![Results](https://raw.githubusercontent.com/rachmiroff/images/refs/heads/main/auca/com-392/spring-2026/nbody-project/simulation.png)](https://drive.google.com/open?id=1LLFR2NcRhT2R43SCoZ69322wU0EMG35S)
 
-Ensure that Open MPI is installed and your parallelized solution is prepared. Then, compile the programs:
+## Tasks
 
-```bash
-make
+1. Upload or clone the `nbody.c` and `nbody-mpi.c` source files to our course server `auca.space` from this repository. You must measure performance on `auca.space`, not on your computer.
+2. Compile `nbody.c` and its parallel version `nbody-mpi.c` by running `make`.
+3. Execute the serial program with the command `time ./nbody 100 0.01 128 10000 100 100 > SerialSimulation.txt`.
+4. Use `scp` to copy the generated `SerialSimulation.txt` file to your computer.
+5. Clone the visualization Unity project from the repository mentioned in this Readme file. Then, open it in Unity Editor 6.
+6. Open the `Main.unity` scene file from the Project panel and the `Assets` directory.
+7. Select the `Simulator` object in the Hierarchy panel.
+8. In the Inspector panel, under the `Gravitational Simulator (Script)`, ensure that the `Replay Simulation from File` option is checked.
+9. In the `Simulation File` field, select the file you downloaded in Step 5. You may need to move the file into the `SimulationData` directory of the Unity project first to be able to select it.
+10. Start the replay by clicking on the Play button in Unity. Enjoy watching the planetary bodies form stable orbits around each other after a big explosive start (not a bang in our case).
+11. Return to the `auca.space` server and start modifying the `nbody-mpi.c` file. Use the Open MPI library and its Collective Communication functions to distribute N-body computations.
+12. Compile your `nbody-mpi.c` code with `make`.
+13. Test your code with `time mpirun -np 16 ./nbody-mpi 100 0.01 128 10000 100 100 > ParallelSimulation.txt`.
+14. Compare the output files with `vimdiff *.txt`. The simulation files should be identical.
+15. Copy `ParallelSimulation.txt` into the `SimulationData` folder of the Unity project. Rerun the visualization to verify that it functions as expected.
+16. Experiment with varying the number of processors and bodies to determine when it is most effective to use your MPI solution.
+
+## Rules
+
+* Do NOT profile code anywhere except on our server at `auca.space`.
+* Avoid procrastination and completing work at the last moment. If the servers become overloaded close to the deadline, obtaining accurate measurements will be difficult. Extensions will not be granted for this reason.
+* Do NOT alter the output format, as it will render the Unity visualization non-functional.
+* Utilize the provided `Makefile` exclusively for compiling the code.
+* Do NOT modify the core N-body simulation algorithm. It MUST remain the brute-force [direct N-body algorithm](http://www.scholarpedia.org/article/N-body_simulations_(gravitational)#Direct_methods), known for its high accuracy. Despite its quadratic complexity, which renders it impractical for large celestial systems on a single core, it is essential for maintaining the integrity of the simulation. For those interested in more scalable, approximated solutions, the Unity project includes an implementation of the Barnes-Hut Tree Code method, which operates at $O(N\log(N))$ complexity. This can be accessed by disabling replays in the `Gravitational Simulator (Script)` within the Inspector panel. You are encouraged to compare its performance with the direct method on your computer by experimenting with other checkboxes. Ensure all settings are reset to their original state before testing your simulation files.
+* Refrain from using assembly tricks, intrinsics, or multithreading APIs to enhance your code's performance. The use of Open MPI functions is permitted solely for accelerating the `nbody-mpi.c` code.
+
+## Recommendations
+
+We recommend not using AI systems to optimize your code, but we do NOT prohibit their use. Instead, we suggest using them as tutors to assist with the C programming language or to help strategize your optimization efforts.
+
+* Try understanding the serial algorithms first in `nbody.c` to identify the most suitable parts of the code for parallel and distributed computation.
+* A simple solution with point-to-point MPI functions such as `MPI_Send` and `MPI_Recv` may be a good start. However, to achieve the best performance, consider using some collective communication functions from the following list (not all of them may be necessary):
+
+    * `MPI_Bcast`
+    * `MPI_Scatter`, `MPI_Gather`, `MPI_Allgather`,
+    * `MPI_Reduce`, `MPI_Allreduce`
+
+* You can use the following code to define a custom MPI date type for the `body_t` struct:
+
+```c
+static MPI_Datatype create_body_t_mpi_type(void)
+{
+    static const int count = 7;
+    const int block_lengths[] = {
+        1, 1,
+        1, 1,
+        1, 1,
+        1
+    };
+    MPI_Aint offsets[] = {
+        offsetof(body_t, x),  offsetof(body_t, y),
+        offsetof(body_t, ax), offsetof(body_t, ay),
+        offsetof(body_t, vx), offsetof(body_t, vy),
+        offsetof(body_t, mass)
+    };
+    const MPI_Datatype types[] = {
+        MPI_FLOAT, MPI_FLOAT,
+        MPI_FLOAT, MPI_FLOAT,
+        MPI_FLOAT, MPI_FLOAT,
+        MPI_FLOAT
+    };
+
+    MPI_Datatype type;
+    MPI_Type_create_struct(count, block_lengths, offsets, types, &type);
+    MPI_Type_commit(&type);
+
+    return type;
+}
 ```
 
-Next, execute the parallelized program. Remember to specify all required command-line arguments:
+* Use the function in the following way to create your type:
 
-```
-time mpirun -np <number of processes>             \
-    ./nbody-mpi <time period (~10-100)>           \
-                <delta time (~0.01-0.1)>          \
-                <body count (~100-1000)>          \
-                <initial body mass (~10000)>      \
-                <softening length (~100)>         \
-                [debug acceleration scale (~100)] > <file to write the output>
+```c
+MPI_Datatype mpi_body_t = create_body_t_mpi_type();
 ```
 
-You can run the serial program as follows:
+* Don't forget to deallocate the created type before `MPI_Finalize()`:
 
-```
-time ./nbody <time period (~10-100)>           \
-             <delta time (~0.01-0.1)>          \
-             <body count (~100-1000)>          \
-             <initial body mass (~10000)>      \
-             <softening length (~100)>         \
-             [debug acceleration scale (~100)] > <file to write the output>
+```c
+MPI_Type_free(&mpi_body_t);
 ```
 
-## Licensing
+* To reuse an array for sending and receiving data with `MPI_Allgather`, you must use the `MPI_IN_PLACE` constant as a `sendbuf`, as outlined [here](https://www.open-mpi.org/doc/v3.0/man3/MPI_Allgather.3.php). This approach is particularly useful when you want to optimize memory usage by avoiding additional buffer allocation.
 
-*nbody-starter* is licensed under the MIT license. See LICENSE for the full license text.
+## Bonus Points
 
-## Credits
+You may create a version of the optimized program that utilizes CUDA and NVIDIA GPUs instead of MPI to speed up the calculations. Our Software Engineering lab is equipped with NVIDIA GPUs, the latest version of CUDA, and the most recent version of Visual Studio with CUDA integration. You can use those computers to develop, test, and debug your code if you do not have access to NVIDIA hardware.
 
-*nbody-starter* was created by [Dmitrii Toksaitov](https://github.com/toksaitov).
+To be eligible for up to 5 bonus points, you must schedule an appointment with the instructor, demonstrate your CUDA solution, and be prepared to answer questions about it. Please do not submit any files containing CUDA solutions to this repository.
+
+## What to Submit
+
+Commit and push your changes to the private GitHub repository provided by your instructor. Before the deadline, submit the URL of your latest commit to Moodle. The URL MUST include the commit hash.
+
+## Deadline
+
+Check Moodle for information about the deadlines.
+
+## Documentation
+
+    man gcc
+    man mpicc
+    man mpirun
+
+## Links
+
+### C, GDB
+
+* [Beej's Guide to C Programming](https://beej.us/guide/bgc)
+* [Beej's Quick Guide to GDB](https://beej.us/guide/bggdb)
+
+### MPI
+
+* [MPI Tutorial](https://mpitutorial.com)
+* [MPI LLNL HPC Tutorials](https://hpc-tutorials.llnl.gov/mpi)
+* [Open MPI Official Documentation](https://www.open-mpi.org/doc)
+
+## Books
+
+* C Programming: A Modern Approach, 2nd Edition by K. N. King

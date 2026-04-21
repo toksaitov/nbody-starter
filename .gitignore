@@ -1,5 +1,3 @@
 *.txt
-*.exe
 nbody
 nbody-mpi
-hostfile
